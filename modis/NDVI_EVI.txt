@@ -1,0 +1,41 @@
+// === 1. Nhập dữ liệu: MODIS và tập điểm CO₂ từ Assets ===
+// Dữ liệu MODIS sản phẩm MOD13A2 phiên bản 061 (NDVI & EVI, 16 ngày, 1km)
+var imageCollection = ee.ImageCollection("MODIS/061/MOD13A2");
+
+// Tập điểm CO2 bạn đã upload lên GEE (tọa độ điểm đo CO2)
+var table = ee.FeatureCollection("projects/hidden-talon-429103-k9/assets/oco2_landcover_2020");
+
+// === 2. Lọc bộ ảnh MODIS theo thời gian và chọn chỉ số cần thiết ===
+// Ở đây lấy trong khoảng năm 2020
+var startDate = ee.Date('2020-01-01');
+var endDate = ee.Date('2020-12-31');
+
+// Lọc ảnh MODIS theo thời gian, chọn NDVI và EVI
+var filtered = imageCollection
+  .filterDate(startDate, endDate)
+  .select(["NDVI", "EVI"]);
+
+// === 3. Trích xuất dữ liệu MODIS tại từng điểm CO₂ ===
+// Lặp qua từng ảnh MODIS, lấy giá trị NDVI & EVI tại mỗi điểm
+var extracted = filtered.map(function(img) {
+  var date = img.date().format('YYYY-MM-dd'); // Lấy ngày ảnh
+  return img.sampleRegions({
+    collection: table,        // Tập điểm cần lấy giá trị
+    scale: 1000,              // MOD13A2 có độ phân giải 1km
+    geometries: true          // Giữ lại hình học (tọa độ điểm)
+  }).map(function(f) {
+    return f.set('image_date', date); // Gắn thông tin ngày ảnh vào từng điểm
+  });
+}).flatten(); // Gộp tất cả lại thành 1 FeatureCollection duy nhất
+
+// === 4. In kiểm tra và hiển thị tập điểm lên bản đồ (tuỳ chọn) ===
+print('Dữ liệu trích xuất:', extracted.limit(5));
+Map.addLayer(table, {}, 'Điểm CO2');
+Map.centerObject(table, 6);
+
+// === 5. Xuất dữ liệu ra file CSV trên Google Drive ===
+Export.table.toDrive({
+  collection: extracted,
+  description: 'NDVI_EVI_2020',
+  fileFormat: 'CSV'
+});
