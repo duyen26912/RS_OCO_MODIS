@@ -90,7 +90,7 @@ flowchart TD
     B --> C[oco2_all_YYYY.csv]
     B --> D[oco3_all_YYYY.scv]
     C --> E[oco_csv.ipynb]
-    D --> E[oco_csv_YYYY.csv]
+    D --> E[oco_csv.ipynb]
     E --> F[oco_merged.csv]
     F --> G[oco_buffer.ipynb]
     G --> H[oco_rice.csv]
